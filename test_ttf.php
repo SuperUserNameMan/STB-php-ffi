@@ -41,3 +41,31 @@ for( $j = 0 ; $j < $h ; $j++ )
 
 TTF::FreeBitmap( $bitmap , $font->userdata );
 
+/* Should output this (on Linux) :
+            :.            
+            MM            
+           .@@.           
+           V@@V           
+           @@@@           
+          o@@@@o          
+          @Vo@@@          
+         :@:.@@@i         
+         MM  M@@M         
+        .@i  :@@@:        
+        o@    @@@V        
+        @o    i@@@.       
+       i@.     @@@o       
+       @M      V@@@       
+      :@:      .@@@i      
+      V@::::::::@@@@      
+     .@@@@@@@@@@@@@@:     
+     o@..........@@@M     
+     @V          V@@@.    
+    i@:          .@@@V    
+    @@            M@@@.   
+   :@o            o@@@o   
+   @@:            .@@@@   
+ .V@@V            :@@@@V  
+:@@@@@@o        iM@@@@@@@o
+
+*/
