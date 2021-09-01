@@ -1901,6 +1901,13 @@ int stbir_resize_region(  const void *input_pixels , int input_w , int input_h ,
 
 
 
+//-------------- custom helper function -------------------------------------------
+void  stbir_set_progress_report( float val );
+float stbir_get_progress_report();
+//--------------- - - - - - - -- - - - -  -----------------------------------------
+
+
+
 
 
 /* stb_image_write - v1.16 - public domain - http://nothings.org/stb
@@ -2519,6 +2526,5 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
-
 
 
