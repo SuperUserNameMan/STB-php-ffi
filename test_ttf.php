@@ -1,6 +1,6 @@
 <?php
 
-include("lib/TTF.php");
+include("lib/STD.php");
 
 
 $chr = mb_ord("A"); 
