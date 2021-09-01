@@ -17,16 +17,16 @@ __STD-php-ffi__ is a binding and a wrapper to :
 
 ---
 
-	`STB::` can be used to call any included stb API :
+`STB::` can be used to call any included stb API :
 
-	- `STB::stbi_*`       : API from `stb_image.h` and `stb_image_write.h`
-	- `STB::stbir_*`      : API from `stb_image_resize.h`
-	- `STB::stbrp_*`      : API from `stb_rect_pack.h`
-	- `STB::stbtt_*`      : API from `stb_truetype.h`
-	- `STB::stb_vorbis_*` : API from `stb_vorbis.c`
+- `STB::stbi_*`       : API from `stb_image.h` and `stb_image_write.h`
+- `STB::stbir_*`      : API from `stb_image_resize.h`
+- `STB::stbrp_*`      : API from `stb_rect_pack.h`
+- `STB::stbtt_*`      : API from `stb_truetype.h`
+- `STB::stb_vorbis_*` : API from `stb_vorbis.c`
 
-	`STBI::*` is a shortcut to both `STB::stbi_*` and to `STB::stbir_*` ; it also contains their constants and helpers.
+`STBI::*` is a shortcut to both `STB::stbi_*` and to `STB::stbir_*` ; it also contains their constants and helpers.
 
-	`TTF::*` is a shortcut to `STB::stbtt_*`, and also contains dedicated constants and helpers.
+`TTF::*` is a shortcut to `STB::stbtt_*`, and also contains dedicated constants and helpers.
 
-	`Vorbis::*` is a shortcut to `STB::stb_vorbis_*` and contains dedicated constants and helpers.
+`Vorbis::*` is a shortcut to `STB::stb_vorbis_*` and contains dedicated constants and helpers.
