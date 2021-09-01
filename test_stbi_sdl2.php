@@ -38,18 +38,17 @@ SDL::Init( SDL::INIT_VIDEO );
 
 $win = SDL::CreateWindow( "STBI and SDL", 100, 100, 640, 480, SDL::WINDOW_SHOWN );
 
+$win_surface = SDL::GetWindowSurface( $win );
+$image_surface = SDL::CreateRGBSurfaceWithFormatFrom( $image , $image_w->cdata , $image_h->cdata , $depth , $pitch , $pformat );
+
 $tend = microtime( true ) + 5.0 ;
 
 while( $tend > microtime( true ) )
 {
 
-	$surface = SDL::GetWindowSurface( $win );
+	SDL::FillRect( $win_surface , null , SDL::MapRGB( $win_surface->format, rand( 0 , 0xFF ),  rand( 0 , 0xFF ),  rand( 0 , 0xFF ) ) );
 
-	SDL::FillRect( $surface , null , SDL::MapRGB( $surface->format, rand( 0 , 0xFF ),  rand( 0 , 0xFF ),  rand( 0 , 0xFF ) ) );
-
-	$surface = SDL::CreateRGBSurfaceWithFormatFrom( $image , $image_w->cdata , $image_h->cdata , $depth , $pitch , $pformat );
-
-	SDL::BlitSurface( $surface , null , SDL::GetWindowSurface( $win ) , null ); //FFI::addr( SDL::GetWindowSurface( $win )->clip_rect ) );
+	SDL::BlitSurface( $image_surface , null , $win_surface , null ); //FFI::addr( SDL::GetWindowSurface( $win )->clip_rect ) );
 
 	SDL::UpdateWindowSurface( $win );
 
@@ -59,7 +58,7 @@ while( $tend > microtime( true ) )
 
 //sleep(3);
 
-SDL::FreeSurface( $surface );
+SDL::FreeSurface( $image_surface );
 
 SDL::DestroyWindow( $win );
 SDL::Quit();
