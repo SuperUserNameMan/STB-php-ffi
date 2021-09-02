@@ -70,11 +70,11 @@ else
 		//for( $i = 0; $i<10; $i++ )
 		{
 
-			$_spc = Vorbis::get_frame_short_interleaved( $v , 2 , $_buffer , $_buffer_size ) ;
+			$_spc = Vorbis::get_frame_short_interleaved( $v , $v_info->channels , $_buffer , $_buffer_size ) ;
 
 			$v_samples -= $_spc;
 
-			$bytes = $_spc * 2 * 2 ;
+			$bytes = $_spc * $v_info->channels * 2 ;
 
 			SDL::AudioStreamPut( $stream , $_buffer , $bytes );
 
@@ -88,7 +88,7 @@ else
 
 		echo ( $v_samples / $v_info->sample_rate ).PHP_EOL; // seconds remaining
 
-		while( SDL::GetQueuedAudioSize( $audio ) > ($_buffer_size*2) ); // let's wait a little
+		while( SDL::GetQueuedAudioSize( $audio ) > ($_buffer_size*3) ); // let's wait a little
 	}
 
 	SDL::FreeAudioStream( $stream );
@@ -105,5 +105,4 @@ Vorbis::close( $v );
 SDL::Quit();
 
 // EOF
-
 
