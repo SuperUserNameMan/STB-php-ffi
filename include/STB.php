@@ -294,4 +294,43 @@ class Vorbis
 		$callable = [STB::$ffi, 'stb_vorbis_'.$method];		
 		return $callable(...$args);
 	}
+
+
+	//----------------------------------------------------------------------------------
+	// Helpers
+	//----------------------------------------------------------------------------------
+
+	public static function get_error_message( int $err ) : string
+	{
+		return [
+			0 => "Ok" ,
+				
+			static::ERR_need_more_data         => "ERR_need_more_data" , // not a real error
+
+			static::ERR_invalid_api_mixing     => "ERR_invalid_api_mixing" ,  // can't mix API modes
+			static::ERR_outofmem               => "ERR_outofmem" ,  // not enough memory
+			static::ERR_feature_not_supported  => "ERR_feature_not_supported" ,  // uses floor 0
+			static::ERR_too_many_channels      => "ERR_too_many_channels" ,  // STB_const MAX_CHANNELS is too small
+			static::ERR_file_open_failure      => "ERR_file_open_failure" ,  // fopen() failed
+			static::ERR_seek_without_length    => "ERR_seek_without_length" ,  // can't seek in unknown-length file
+
+			static::ERR_unexpected_eof         => "ERR_unexpected_eof" , // file is truncated?
+			static::ERR_seek_invalid           => "ERR_seek_invalid" , // seek past EOF
+
+			// vorbis errors:
+			static::ERR_invalid_setup          => "ERR_invalid_setup" ,
+			static::ERR_invalid_stream         => "ERR_invalid_stream" ,
+
+			// ogg errors:
+			static::ERR_missing_capture_pattern          => "ERR_missing_capture_pattern" ,
+			static::ERR_invalid_stream_structure_version => "ERR_invalid_stream_structure_version" ,
+			static::ERR_continued_packet_flag_invalid    => "ERR_continued_packet_flag_invalid" ,
+			static::ERR_incorrect_stream_serial_number   => "ERR_incorrect_stream_serial_number" ,
+			static::ERR_invalid_first_page               => "ERR_invalid_first_page" ,
+			static::ERR_bad_packet_type                  => "ERR_bad_packet_type" ,
+			static::ERR_cant_find_last_page              => "ERR_cant_find_last_page" ,
+			static::ERR_seek_failed                      => "ERR_seek_failed" ,
+			static::ERR_ogg_skeleton_not_supported       => "ERR_ogg_skeleton_not_supported" ,
+		][ $err ];
+	}
 }
