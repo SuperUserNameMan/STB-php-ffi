@@ -1,11 +1,11 @@
-# STD-php-ffi
+# STB-php-ffi
 PHP 8 FFI binding to several [nothings/stb](https://github.com/nothings/stb) libraries.
 
 ---
 
 __[nothings/stb](https://github.com/nothings/stb)__ is a cool collection of C/C++ single file public domain libraries.
 
-__STD-php-ffi__ is a binding and a wrapper to :
+__STB-php-ffi__ is a binding and a wrapper to :
 
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
 - [stb_image_resize.h](https://github.com/nothings/stb/blob/master/stb_image_resize.h)
