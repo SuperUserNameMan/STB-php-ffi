@@ -22,12 +22,25 @@ print_r( $info );
 // ---
 
 $comm = Vorbis::get_comment( $v );
+
 echo "- Vendor : ".FFI::string( $comm->vendor ).PHP_EOL ;
 
 for( $c = 0 ; $c < $comm->comment_list_length ; $c++ )
 {
 	echo "- Comment #$c : ".FFI::string( $comm->comment_list[ $c ] ).PHP_EOL ;
 }
+
+// ---
+
+$samples = Vorbis::stream_length_in_samples( $v );
+
+echo "- Samples : $samples".PHP_EOL;
+
+// ---
+
+$duration = Vorbis::stream_length_in_seconds( $v );
+
+echo "- Duration : $duration s".PHP_EOL;
 
 // ---
 
@@ -50,9 +63,10 @@ FFI\CData:struct <anonymous> Object
 - Comment #1 : ALBUM=YouTube Audio Library
 - Comment #2 : TITLE=Impact Moderato
 - Comment #3 : ARTIST=Kevin MacGoodMusic
+- Samples : 2379175
+- Duration : 74.349220275879 s
 
 */
 
 // EOF
-
 
