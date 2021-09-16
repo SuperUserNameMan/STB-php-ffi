@@ -30,3 +30,8 @@ __STB-php-ffi__ is a binding and a wrapper to :
 `TTF::*` is a shortcut to `STB::stbtt_*`, and also contains dedicated constants and helpers.
 
 `Vorbis::*` is a shortcut to `STB::stb_vorbis_*` and contains dedicated constants and helpers.
+
+---
+
+Credits :
+- the `test.ogg` file is converted from ["Silly Intro" by Alexander Nakarada](https://freepd.com/comedy.php) 
