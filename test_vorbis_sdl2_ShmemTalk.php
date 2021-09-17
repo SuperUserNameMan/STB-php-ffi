@@ -279,9 +279,20 @@ $vorbis_info = null;
 $stream = null ;
 $status = IS_STOPPED;
 
+$check_master_timeout = microtime( true ) + 1.0 ;
 
 while(1)
-{
+{	
+	if ( $check_master_timeout < microtime( true ) )
+	{
+		if ( ! $master->master_is_alive() )
+		{
+			break;
+		}
+		
+		$check_master_timeout += 1.0 ;
+	}
+
 	if ( $master->Synch() )
 	{
 		file_put_contents( "out.txt", time()." : ".$master->Get(0).PHP_EOL , FILE_APPEND );
@@ -316,7 +327,7 @@ while(1)
 		}
 	}
 
-	usleep( 1_000 ); // TODO FIXME will not work under windows
+	usleep( 1_000 ); 
 }
 
 // ---
@@ -325,5 +336,4 @@ SDL::CloseAudioDevice( $audio );
 SDL::Quit();
 
 // EOF
-
 
