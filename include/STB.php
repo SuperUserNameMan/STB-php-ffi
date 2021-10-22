@@ -30,7 +30,7 @@ class STB
 
 	static $ffi_typeof_void_p; 
 
-	public static function STB()
+	public static function STB() : void
 	{
 		if ( static::$ffi ) 
 		{ 
@@ -117,7 +117,150 @@ class STBI
 		}
 		return $callable(...$args);
 	}
+
+	//----------------------------------------------------------------------------------
+	// Helpers
+	//----------------------------------------------------------------------------------
+
+	static $image_cache_data = []; //!\ dual function of the cache : 1) cache the data, 2) prevent the GC of PHP from erasing the FFI array when returning from STBI::Load()
+
+	static function Load( string $image_path , int $desired_channels = STBI::DEFAULT ) : object
+	{
+		if ( isset( static::$image_cache_data[ $image_path ] ) )
+		{
+			$image = static::$image_cache_data[ $image_path ] ;
+			$image->shares++;
+			return $image ;
+		}
+
+		$_w = FFI::new("int");
+		$_h = FFI::new("int");
+		$_c = FFI::new("int");
+		$_data = STB::stbi_load( $image_path , FFI::addr( $_w ) , FFI::addr( $_h ) , FFI::addr( $_c ) , $desired_channels );
+
+		$image = (object)[
+			'data'     => $_data ,
+			'w'        => $_w->cdata ,
+			'h'        => $_h->cdata ,
+			'channels' => $_c->cdata ,
+			'shares'   => 1 ,
+			'path'     => $image_path ,
+		];
+
+		static::$image_cache_data[ $image_path ] = $image ;
+
+		return $image ;
+	}
+
+	static function Free( object $image ) : void
+	{
+		if ( $image->shares > 0 )
+		{
+			$image->shares -- ;
+
+			if ( $image->shares == 0 )
+			{
+				STB::stbi_image_free( $image->data );
+				$image->data = null ;
+				$image->w = 0 ;
+				$image->h = 0 ;
+				$image->channels = 0;
+
+				unset( static::$image_cache_data[ $image->path ] );
+			}
+		}
+	}
 };
+
+
+class TTF_Font_Data
+{
+	static array $cache = [];
+
+	public object $data ;
+	public int    $size ;
+
+	public string $path ;
+
+	static function Load( string $font_path ) : TTF_Font_Data
+	{
+		if ( isset( static::$cache[ $font_path ] ) )
+		{
+			return static::$cache[ $font_path ] ;
+		}
+	
+		$font_data = new TTF_Font_Data( $font_path );
+
+		static::$cache[ $font_path ] = $font_data ;
+
+		return $font_data ;
+	}
+
+	function __construct( string $font_path )
+	{
+		$this->path = $font_path ;
+		$this->size = filesize( $font_path ) ;
+		$this->data = FFI::new( "uint8_t[".$this->size."]" , false ) ; // unmanaged by php's gc
+
+		FFI::memcpy( $this->data , file_get_contents( $font_path ) , $this->size ) ;
+	}
+
+	function __destruct()
+	{
+		echo "Deleting font data : ".$this->path.PHP_EOL;
+		FFI::free( $this->data );
+	}
+}
+
+
+class TTF_Font
+{
+	public object $font ;
+	public string $path ;
+	public int   $index ;
+
+	public object $metrics ;
+
+	function __construct( string $font_path , int $font_index = 0 )
+	{
+		$this->font = STB::$ffi->new( "stbtt_fontinfo" , false ) ; // unmanaged by php's gc
+
+		$this->path = $font_path ;
+		$this->index = $font_index ;
+
+		$font_data = TTF_Font_Data::Load( $font_path ); 
+
+		TTF::InitFont( FFI::addr( $this->font ) , $font_data->data , TTF::GetFontOffsetForIndex( $font_data->data , $font_index ) ) ;
+
+		$this->metrics = STB::$ffi->new('struct {'
+
+			.'int text_w ;' 
+			.'int text_h ;'
+
+			.'int ascent ;'  //!\ raw data is unscaled !
+			.'int descent ;' //!\ raw data is unscaled !
+			.'int lineGap ;' //!\ raw data is unscaled !
+			.'int lineHeight ;' //!\ raw data is unscaled !
+
+			.'float scale ;'
+
+			.'int advanceWidth ;' // scaled.
+			.'int leftSideBearing ;' // scaled.
+
+		.'}' , false ); // unmanaged by php's gc
+
+		TTF::GetFontVMetrics( FFI::addr( $this->font ) , FFI::addr( $this->metrics->ascent ) , FFI::addr( $this->metrics->descent ) , FFI::addr( $this->metrics->lineGap ) );
+
+		$this->metrics->lineHeight = $this->metrics->ascent - $this->metrics->descent + $this->metrics->lineGap ;
+	}
+
+	function __destruct()
+	{
+		echo "Deleting font struct : ".$this->path."[".$this->index."]".PHP_EOL;
+		FFI::free( $this->metrics );
+		FFI::free( $this->font );
+	}
+}
 
 class TTF 
 {
@@ -214,38 +357,222 @@ class TTF
 	// Helpers
 	//----------------------------------------------------------------------------------
 
-	static $font_cache_data = []; //!\ dual function of the cache : 1) cache the data, 2) prevent the GC of PHP from erasing the FFI array when returning from TTF::Load()
-
-
 	/***
-			Load a `.ttf` font or a `.ttc` font pack
+			Load a `.ttf` font or a font from a `.ttc` font pack
 
 			Parameter $font_index let choose which font from the `.ttc` pack.
 	*/
-	public static function Load( $font_path , $font_index = 0 )
+	public static function Load( string $font_path , int $font_index = 0 ) : TTF_Font
 	{
-		$font = STB::$ffi->new("stbtt_fontinfo");
-
-		if ( isset( static::$font_cache_data[ $font_path ] ) )
-		{
-			$font_data = static::$font_cache_data[ $font_path ];
-		}
-		else
-		{
-			$file_size = filesize( $font_path );
-			$font_data = FFI::new( "uint8_t[$file_size]" );
-			FFI::memcpy( $font_data , file_get_contents( $font_path ) , $file_size );
-
-			static::$font_cache_data[ $font_path ] = $font_data ;
-
-			//!\ without this cache, the GC of PHP would erase the FFI array as soon as returning from TTF::Load()
-		}
-
-		static::InitFont( FFI::addr( $font ) , $font_data , static::GetFontOffsetForIndex( $font_data , $font_index ) );
+		$font = new TTF_Font( $font_path , $font_index );
 
 		return $font;
 	}
 
+
+	/***
+			Returns the metrics of a text string and each lines of the text ...
+
+			Params :
+			- `$text` is a string that may contain several lines ;
+			- `$font` is the TTF_Font object returned by `TTF::Load()` ;
+			- `$text_h` is the maximum height of a character in pixels ;
+			- `$rect` contain the maximum width and height in pixels of the canvas on which the text will be printed.
+			- `$auto_wrap` indicates if this function wrap the text when it overflow on the right side of the rect
+			- `$grid` see code 
+
+			Return : an array as `[ array $lines , int $w , int $h ]` where :
+				- `$lines` is an array of each lines of the text which may be cut to fit the canvas ;
+				- `$w` and `$h` dimensions of the canvas ;
+	*/
+	public static function text_metrics( string $text , TTF_Font $font , int $text_h , array $rect = [] , bool $auto_wrap = false , ?object $grid = null ) : array // [ $lines , $w , $h ]
+	{
+		$rect[ 0 ] ??= 0 ;
+		$rect[ 1 ] ??= 0 ;
+		$rect[ 2 ] ??= PHP_INT_MAX ;
+		$rect[ 3 ] ??= PHP_INT_MAX ;
+
+		//echo "text_metrics:";print_r( $rect );
+
+		list( $offset_x , $offset_y , $max_w , $max_h ) = $rect ;
+
+		$grid ??= (object)[ 
+			'cpos_to_line' => [] , // for each chr pos store the line number
+			'line_to_xpos' => [] , // for each line store a list of char pos in pixel
+			'line_to_cpos' => [] , // for each line store the chr pos of its first chr
+			'last_line'    => 0 ,
+			'line_count'   => 0 ,
+			'last_cpos'    => 0 ,
+			'char_count'   => 0 ,
+		]; 
+
+		$font->metrics->scale = TTF::ScaleForPixelHeight( FFI::addr( $font->font ) , $text_h );
+
+		$lines = [] ; 
+
+		$line_w  = 0;
+		$_line_w = 0;
+
+		$line_num = 0 ;
+
+		$line_beg  = 0 ;
+
+		$line_grid = [ 0 ];
+
+		$last_char = mb_strlen( $text ) - 1 ;
+
+		$_last_space_pos = -1;
+		$_last_space_w   = 0;
+
+		for( $pos = 0 ; $pos <= $last_char ; $pos++ )
+		{
+			$chr = mb_substr( $text , $pos , 1 );
+			$ord = mb_ord( $chr );
+
+			if ( $chr == ' ' )
+			{
+				$_last_space_pos = $pos ;
+				$_last_space_w   = $_line_w ;
+			}
+
+			static::GetCodepointHMetrics( FFI::addr( $font->font ) , $ord , FFI::addr($font->metrics->advanceWidth) , FFI::addr($font->metrics->leftSideBearing)  );
+
+			$_line_w += $font->metrics->advanceWidth * $font->metrics->scale ;
+
+			$line_grid[] = (int)$_line_w ;
+
+			$grid->cpos_to_line[ $pos ] = $line_num ;
+
+			$wrap_now = ( $auto_wrap and ( $_line_w >= $max_w ) ) ;
+
+			if ( $chr === "\n" or $wrap_now )
+			{
+				if ( $wrap_now and $_last_space_pos >= 0 )
+				{
+					$line_len = $_last_space_pos - $line_beg + 1 ;
+					$lines[ $line_num ] = mb_substr( $text , $line_beg , $line_len ) ; //. '|';
+
+					$grid->line_to_cpos[ $line_num ] = $line_beg ;
+
+					$line_beg = $_last_space_pos + 1 ;
+					$pos = $_last_space_pos ;
+				}
+				else
+				{
+					$line_len = $pos - $line_beg + 1 ;
+					$lines[ $line_num ] = mb_substr( $text , $line_beg , $line_len );
+
+					$grid->line_to_cpos[ $line_num ] = $line_beg ;
+
+					$line_beg = $pos + 1 ;
+				}
+
+				$grid->line_to_xpos[ $line_num ] = array_slice( $line_grid , 0 , $line_len );
+				
+				$_last_space_pos = -1 ;
+				$_last_space_w   = 0 ;
+
+				$line_num ++ ;
+
+				$line_w = max( $line_w , $_line_w );
+				$_line_w = 0 ;
+
+				$line_grid = [ 0 ];
+			}
+		}
+
+		$lines[ $line_num ] = mb_substr( $text , $line_beg );
+
+		$grid->line_to_cpos[ $line_num ] = $line_beg ;
+		$grid->line_to_xpos[ $line_num ] = array_slice( $line_grid , 0 , mb_strlen( $lines[ $line_num ] ) + 1 );
+
+		$grid->last_line  = $line_num ;
+		$grid->line_count = $line_num + 1 ;
+
+		$grid->last_cpos  = max( 0 , $last_char );
+		$grid->char_count = $last_char + 1 ;
+
+		$grid->cpos_to_line[ $grid->char_count ] = $line_num ;
+
+		$w = max( $line_w , $_line_w );
+		$h = count( $lines ) * $font->metrics->lineHeight * $font->metrics->scale ;
+
+		$font->metrics->text_w = min( $w , $max_w ) ;
+		$font->metrics->text_h = min( $h , $max_h ) ;
+
+//		if ( $text == '' )
+//		{
+//			print_r( $lines );
+//			print_r( $grid );
+//		}
+
+		return [ $lines , $w , $h ];
+	}
+
+
+
+	/***
+			Print a text using a callback, and the lines and metrics provided by ::text_metrics()
+
+			$cb_print_glyph = function( object $glyph , int $x , int $y , int $w , int $h , array &$cb_data )
+	*/
+	public static function print_lines( array $lines , TTF_Font $font , callable $cb_print_glyph , array &$cb_user_data ) : void
+	{
+
+		static $glyph_rect = null ; $glyph_rect ??= FFI::new("struct { int x, y, w, h ; }");
+
+		$line_h = $font->metrics->lineHeight * $font->metrics->scale ;
+		$line_n = 0 ;
+
+		foreach( $lines as $line_n => $line )
+		{
+			$len = mb_strlen( $line );
+
+			$pos_x = 0 ;
+			$pos_y = ( ( $font->metrics->ascent + $font->metrics->lineGap/2 ) * $font->metrics->scale ) + ( $line_h * $line_n ) ;		
+
+			for( $c = 0 ; $c < $len ; $c++ )
+			{
+				$glyph_ord = mb_ord( mb_substr( $line , $c , 1 ) );
+
+				if ( $glyph_ord < 0 or $glyph_ord >= 32 )
+				{
+					//echo(__FILE__.','.__LINE__.':');print_r( $glyph_rect );
+					$glyph = static::GetCodepointBitmap( 
+							FFI::addr( $font->font )  , 0 , $font->metrics->scale , $glyph_ord , 
+							FFI::addr( $glyph_rect->w ) , FFI::addr($glyph_rect->h) , FFI::addr($glyph_rect->x) , FFI::addr($glyph_rect->y) 
+					);
+
+					static::GetCodepointHMetrics( FFI::addr($font->font) , $glyph_ord , FFI::addr($font->metrics->advanceWidth) , FFI::addr($font->metrics->leftSideBearing)  );
+
+					//echo "'".mb_chr( $glyph_ord )."' : "; print_r( $glyph );
+
+					$pos_x += $glyph_rect->x;
+
+					$line_y = $pos_y ;
+
+					$pos_y += $glyph_rect->y ;
+
+					if ( $glyph !== null )
+					{
+						$cb_print_glyph( $glyph , (int)$pos_x , (int)$pos_y , (int)$glyph_rect->w , (int)$glyph_rect->h , $cb_user_data );
+					}
+
+					$pos_x += $font->metrics->advanceWidth * $font->metrics->scale - $glyph_rect->x ;
+					$pos_y = $line_y ;
+				
+					if ( $glyph !== null )
+					{
+						static::FreeBitmap( $glyph , $font->font->userdata );	
+					}
+				
+				} // endif glyph >= 32
+			} // end for $c
+		} //  end foreach $line
+
+		return;
+	}
+ 
 };
 
 
@@ -334,3 +661,5 @@ class Vorbis
 		][ $err ];
 	}
 }
+
+//EOF
