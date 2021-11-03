@@ -142,7 +142,7 @@ class STBI
 			'data'     => $_data ,
 			'w'        => $_w->cdata ,
 			'h'        => $_h->cdata ,
-			'channels' => $_c->cdata ,
+			'channels' => $desired_channels > 0 ? $desired_channels : $_c->cdata ,
 			'shares'   => 1 ,
 			'path'     => $image_path ,
 		];
