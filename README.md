@@ -1,5 +1,5 @@
 # STB-php-ffi
-PHP 8 FFI binding to several [nothings/stb](https://github.com/nothings/stb) libraries.
+PHP 8.1 FFI binding to several [nothings/stb](https://github.com/nothings/stb) libraries.
 
 ---
 
